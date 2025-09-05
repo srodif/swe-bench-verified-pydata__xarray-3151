@@ -618,6 +618,34 @@ class TestCombineAuto:
                                       " along dimension x"):
             combine_by_coords([ds1, ds0])
 
+    def test_combine_by_coords_non_monotonic_but_identical_coords(self):
+        # Test for issue where identical coordinates that are non-monotonic
+        # should be allowed since they don't vary between datasets
+        yCoord = ['a', 'c', 'b']  # non-monotonic but identical
+        
+        ds1 = Dataset(
+            data_vars=dict(data=(['x', 'y'], [[1, 2, 3], [4, 5, 6], [7, 8, 9]])),
+            coords=dict(x=[1, 2, 3], y=yCoord)
+        )
+        
+        ds2 = Dataset(
+            data_vars=dict(data=(['x', 'y'], [[10, 11, 12], [13, 14, 15], [16, 17, 18], [19, 20, 21]])),
+            coords=dict(x=[4, 5, 6, 7], y=yCoord)  # same y coordinates as ds1
+        )
+        
+        # This should not raise an error even though y coordinates are non-monotonic
+        # because y coordinates are identical between datasets
+        result = combine_by_coords([ds1, ds2])
+        
+        # Verify the result has the expected shape and coordinates
+        expected_x = [1, 2, 3, 4, 5, 6, 7]
+        expected_y = yCoord
+        
+        assert result.sizes['x'] == 7
+        assert result.sizes['y'] == 3
+        assert list(result.coords['x'].values) == expected_x
+        assert list(result.coords['y'].values) == expected_y
+
 
 @pytest.mark.filterwarnings("ignore:In xarray version 0.13 `auto_combine` "
                             "will be deprecated")
